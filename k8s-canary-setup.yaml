@@ -1,0 +1,172 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cart-api
+  labels:
+    name: cart-api
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cart-db-secret
+  namespace: cart-api
+stringData:
+  MONGO_URI: "https://cart-api-orders-88266388657.us-central1.run.app/api/v2/users"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-api-stable
+  namespace: cart-api
+spec: 
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cart-api
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: cart-api
+        track: stable
+    spec:
+      containers:
+      - name: cart-api
+        image: yecid07/cart-api:1.0.0-stable
+        ports:
+        - containerPort: 5000
+        env:
+        - name: APP_STATUS
+          value: "stable"
+        - name: API_VERSION
+          value: "v1.0.0"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: cart-db-secret
+              key: MONGO_URI
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-api-stable-svc
+  namespace: cart-api
+spec:
+  ports:
+  - port: 80
+    targetPort: 5000
+  selector:
+    app: cart-api
+    track: stable
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-api-canary
+  namespace: cart-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cart-api
+      track: canary
+  template:
+    metadata:
+      labels:
+        app: cart-api
+        track: canary
+    spec:
+      containers:
+      - name: cart-api
+        image: yecid07/cart-api:1.1.0-canary
+        ports:
+        - containerPort: 5000
+        env:
+        - name: APP_STATUS
+          value: "canary"
+        - name: API_VERSION
+          value: "v1.1.0-canary"
+        - name: DEPLOYMENT_DATE
+          value: "2023-10-27"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: cart-db-secret
+              key: MONGO_URI
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-api-canary-svc
+  namespace: cart-api
+spec:
+  ports:
+  - port: 80
+    targetPort: 5000
+  selector:
+    app: cart-api
+    track: canary
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cart-api-ingress
+  namespace: cart-api
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cart-api-stable-svc
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cart-api-ingress-canary
+  namespace: cart-api
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cart-api-canary-svc
+            port:
+              number: 80
