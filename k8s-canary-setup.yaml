@@ -5,14 +5,6 @@ metadata:
   labels:
     name: cart-api
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cart-db-secret
-  namespace: cart-api
-stringData:
-  MONGO_URI: "https://cart-api-orders-88266388657.us-central1.run.app/api/v2/users"
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -136,9 +128,8 @@ kind: Ingress
 metadata:
   name: cart-api-ingress
   namespace: cart-api
-  annotations:
-    kubernetes.io/ingress.class: nginx
 spec:
+  ingressClassName: nginx
   rules:
   - http:
       paths:
@@ -156,10 +147,10 @@ metadata:
   name: cart-api-ingress-canary
   namespace: cart-api
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/canary: "true"
     nginx.ingress.kubernetes.io/canary-weight: "10"
 spec:
+  ingressClassName: nginx
   rules:
   - http:
       paths:
