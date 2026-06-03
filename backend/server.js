@@ -33,7 +33,6 @@ app.get('/health', (req, res) => {
         uptime: process.uptime()
     };
 
-    // Incluir fecha de despliegue solo si es versión canary
     if (status === 'canary') {
         response.deploymentDate = process.env.DEPLOYMENT_DATE || '2026-06-01';
     }
