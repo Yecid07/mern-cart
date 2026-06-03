@@ -67,15 +67,11 @@ apiRoutes.forEach(route => {
 });
 
 const server = app.listen(PORT, async () => {
-<<<<<<< HEAD
     if (process.env.MONGO_URI && process.env.MONGO_URI.startsWith('mongodb')) {
         await connectDB();
     } else {
         console.log('⚠️ MONGO_URI es una URL externa o no está definida. Saltando conexión para el despliegue.');
     }
-=======
-    await connectDB();
->>>>>>> main
     console.log(`Server started at http://localhost:${PORT}`);
 });
 

@@ -151,7 +151,6 @@ metadata:
   name: cart-api-ingress-canary
   namespace: cart-api
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/canary: "true"
     nginx.ingress.kubernetes.io/canary-weight: "10"
 spec:
