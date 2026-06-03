@@ -22,8 +22,8 @@ app.use((req, res, next) => {
 // Endpoint de salud para validación de Canary Deployment
 app.get('/health', (req, res) => {
     const isReady = mongoose.connection.readyState === 1;
-    const status = process.env.APP_STATUS || 'canary';
-    const version = process.env.API_VERSION || 'v1.1.0';
+    const status = process.env.APP_STATUS || 'stable';
+    const version = process.env.API_VERSION || 'v1.0.0';
     
     const response = {
         status: status,
@@ -33,6 +33,7 @@ app.get('/health', (req, res) => {
         uptime: process.uptime()
     };
 
+    // Incluir fecha de despliegue solo si es versión canary
     if (status === 'canary') {
         response.deploymentDate = process.env.DEPLOYMENT_DATE || '2026-06-01';
     }
@@ -66,11 +67,7 @@ apiRoutes.forEach(route => {
 });
 
 const server = app.listen(PORT, async () => {
-    if (process.env.MONGO_URI && process.env.MONGO_URI.startsWith('mongodb')) {
-        await connectDB();
-    } else {
-        console.log('⚠️ MONGO_URI es una URL externa o no está definida. Saltando conexión para el despliegue.');
-    }
+    await connectDB();
     console.log(`Server started at http://localhost:${PORT}`);
 });
 
