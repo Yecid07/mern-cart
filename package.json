@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon backend/server.js",
     "build": "echo 'Backend ready for deployment'",
-    "start": "cross-env NODE_ENV=production node backend/server.js",
+    "start": "node backend/server.js",
     "test": "cross-env NODE_ENV=test vitest run --reporter=verbose || true",
     "test:coverage": "cross-env NODE_ENV=test vitest run --coverage || true",
     "quality:staging": "echo 'Quality checks passed'",
