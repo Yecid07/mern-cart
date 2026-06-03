@@ -10,7 +10,7 @@
     "test:coverage": "cross-env NODE_ENV=test vitest run --coverage || true",
     "quality:staging": "echo 'Quality checks passed'",
     "quality:production": "echo 'Quality checks passed'",
-    "prepare": "husky install || true",
+    "prepare": "husky",
     "release": "semantic-release",
     "release:dry": "semantic-release --dry-run",
     "release:debug": "DEBUG=* semantic-release"
