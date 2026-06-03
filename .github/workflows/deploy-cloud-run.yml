@@ -6,7 +6,7 @@ on:
       - production
 
 env:
-  GCP_PROJECT_ID: project-f10ddf93-e2e5-4130-bc8
+  GCP_PROJECT_ID: project-f10ddf93-e2e5-4130-bc8 
   CLOUD_RUN_SERVICE: cart-api-orders
   CLOUD_RUN_REGION: us-central1
 
