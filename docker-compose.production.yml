@@ -9,7 +9,9 @@
       - NODE_ENV=production
       - MONGO_URI=mongodb://mongo_production:27017/cart_production
     depends_on:
-      - mongo_production
+      mongo_production:
+        condition: service_healthy
+    restart: unless-stopped
 
   mongo_production:
     image: mongo:7
@@ -18,6 +20,12 @@
       - "27019:27017"
     volumes:
       - mongo_production_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   mongo_production_data:

@@ -1,6 +1,6 @@
 ﻿import express from 'express';
 import dotenv from 'dotenv';
-import { connectDB } from './config/db.js';
+import { connectDB, readyStateToText, isDBConnected } from './config/db.js';
 import productRoutes from './routes/product.routes.js';
 import userRoutes from './routes/user.routes.js';
 import orderRoutes from './routes/order.routes.js';
@@ -19,16 +19,16 @@ app.use((req, res, next) => {
     next();
 });
 
-// Endpoint de salud para validación de Canary Deployment
+// Endpoint de salud para validación de Canary Deployment y resiliencia de DB
 app.get('/health', (req, res) => {
-    const isReady = mongoose.connection.readyState === 1;
+    const isReady = isDBConnected();
     const status = process.env.APP_STATUS || 'stable';
     const version = process.env.API_VERSION || 'v1.0.0';
-    
+
     const response = {
         status: status,
         version: version,
-        database: isReady ? 'connected' : 'disconnected',
+        database: readyStateToText(mongoose.connection.readyState),
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     };
@@ -38,9 +38,8 @@ app.get('/health', (req, res) => {
         response.deploymentDate = process.env.DEPLOYMENT_DATE || '2026-06-01';
     }
 
-    // Permitir 200 si la base de datos está conectada o si estamos usando una URI externa de prueba
-    const isExternalUri = process.env.MONGO_URI && !process.env.MONGO_URI.startsWith('mongodb');
-    const httpStatus = (isReady || isExternalUri) ? 200 : 503;
+    // 200 solo si MongoDB está realmente conectado; 503 (degradado) en caso contrario.
+    const httpStatus = isReady ? 200 : 503;
 
     res.status(httpStatus).json(response);
 });
@@ -66,18 +65,34 @@ apiRoutes.forEach(route => {
     app.use(`/api/v2${route.path}`, route.router);
 });
 
-const server = app.listen(PORT, async () => {
-    await connectDB();
-    console.log(`Server started at http://localhost:${PORT}`);
-});
+// El servidor HTTP arranca SIEMPRE, aunque MongoDB no esté disponible.
+// La conexión a la DB se inicia en paralelo y reintenta sola (backoff),
+// de modo que / y /health respondan incluso en estado degradado.
+const startServer = () => {
+    const server = app.listen(PORT, () => {
+        console.log(`Server started at http://localhost:${PORT}`);
+    });
 
-// Manejo de señales para cierre ordenado en Kubernetes
-process.on('SIGTERM', () => {
-    console.log('SIGTERM recibida. Cerrando servidor...');
-    server.close(() => {
-        mongoose.connection.close(false, () => {
-            console.log('Conexiones cerradas exitosamente.');
-            process.exit(0);
+    // No se hace await: un fallo de DB no debe bloquear ni tumbar el arranque.
+    connectDB();
+
+    // Manejo de señales para cierre ordenado en Kubernetes
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM recibida. Cerrando servidor...');
+        server.close(() => {
+            mongoose.connection.close(false, () => {
+                console.log('Conexiones cerradas exitosamente.');
+                process.exit(0);
+            });
         });
     });
-});
+
+    return server;
+};
+
+// No arrancar el servidor durante los tests (se importa `app` directamente).
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
+}
+
+export { app, startServer };

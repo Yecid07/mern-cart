@@ -9,7 +9,8 @@
       - NODE_ENV=testing
       - MONGO_URI=mongodb://mongo_testing:27017/cart_testing
     depends_on:
-      - mongo_testing
+      mongo_testing:
+        condition: service_healthy
 
   mongo_testing:
     image: mongo:7
@@ -18,6 +19,12 @@
       - "27018:27017"
     volumes:
       - mongo_testing_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   mongo_testing_data:
